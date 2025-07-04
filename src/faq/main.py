@@ -10,7 +10,7 @@ def run():
     Run the crew.
     """
     inputs = {
-        "query": "Quelles sont les information du site web ?",
+        "query": "De quel lien existe entre BOCS et les documents ?",
     }
     FaqCrew().crew().kickoff(
         inputs=inputs

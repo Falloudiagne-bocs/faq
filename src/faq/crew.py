@@ -3,6 +3,7 @@ from crewai.project import CrewBase, agent, crew, task
 
 import os
 from dotenv import load_dotenv
+from crewai_tools import WebsiteSearchTool
 from faq.tools.qdrant_vector_search_tool import (
     QdrantVectorSearchTool,
 )
@@ -33,12 +34,7 @@ class FaqCrew:
         custom_embedding_fn=embedding_function,
     )
 
-    website_vector_tool = QdrantVectorSearchTool(
-        collection_name="website-knowledge",
-        qdrant_url=os.getenv("QDRANT_URL"),
-        qdrant_api_key=os.getenv("QDRANT_API_KEY"),
-        custom_embedding_fn=embedding_function,
-    )
+    website_vector_tool = WebsiteSearchTool(website='https://bocs-primature.sn')
 
     @agent
     def data_retrieval_analysis_specialist(self) -> Agent:
