@@ -1,7 +1,6 @@
 from crewai import Agent, Crew, Process, Task
 from crewai.project import CrewBase, agent, crew, task
 
-# from crewai_tools import QdrantVectorSearchTool
 import os
 from dotenv import load_dotenv
 from faq.tools.qdrant_vector_search_tool import (
@@ -9,7 +8,6 @@ from faq.tools.qdrant_vector_search_tool import (
 )
 
 load_dotenv()
-
 
 def embedding_function(text: str) -> list[float]:
     import openai
@@ -35,68 +33,93 @@ class FaqCrew:
         custom_embedding_fn=embedding_function,
     )
 
-
+    website_vector_tool = QdrantVectorSearchTool(
+        collection_name="website-knowledge",
+        qdrant_url=os.getenv("QDRANT_URL"),
+        qdrant_api_key=os.getenv("QDRANT_API_KEY"),
+        custom_embedding_fn=embedding_function,
+    )
 
     @agent
     def data_retrieval_analysis_specialist(self) -> Agent:
         return Agent(
-            config=self.agents_config["data_retrieval_analysis_specialist"],  # type: ignore
+            config=self.agents_config["data_retrieval_analysis_specialist"],
             tools=[self.vector_search_tool],
         )
 
     @agent
-    def source_citer_specialist(self) -> Agent:
+    def website_info_extractor_specialist(self) -> Agent:
         return Agent(
-            config=self.agents_config["source_citer_specialist"],  # type: ignore
-            tools=[self.vector_search_tool],
+            config=self.agents_config["website_info_extractor_specialist"],
+            tools=[self.website_vector_tool],
         )
-    
+
     @agent
-    def website_scraping_specialist(self) -> Agent:
+    def doc_source_citer_specialist(self) -> Agent:
         return Agent(
-            config=self.agents_config["website_scraping_specialist"],
+            config=self.agents_config["doc_source_citer_specialist"],
             tools=[self.vector_search_tool],
         )
 
+    @agent
+    def website_source_citer_specialist(self) -> Agent:
+        return Agent(
+            config=self.agents_config["website_source_citer_specialist"],
+            tools=[self.website_vector_tool],
+        )
 
     @agent
     def report_generation_specialist(self) -> Agent:
         return Agent(
-            config=self.agents_config["report_generation_specialist"],  # type: ignore
-            tools=[self.vector_search_tool],
+            config=self.agents_config["report_generation_specialist"],
+            tools=[self.vector_search_tool, self.website_vector_tool],
         )
 
     @task
-    def retrieve_contracts_task(self) -> Task:
+    def retrieve_info_from_doc_task(self) -> Task:
         return Task(
-            config=self.tasks_config["retrieve_contracts_task"],  # type: ignore
+            config=self.tasks_config["retrieve_info_from_doc_task"],
         )
 
     @task
-    def source_citer_task(self) -> Task:
+    def extract_info_from_website_task(self) -> Task:
         return Task(
-            config=self.tasks_config["source_citer_task"],  # type: ignore
+            config=self.tasks_config["extract_info_from_website_task"],
         )
 
     @task
-    def scrape_website_task(self) -> Task:
+    def source_doc_citer_task(self) -> Task:
         return Task(
-            config=self.tasks_config["scrape_website_task"],
+            config=self.tasks_config["source_doc_citer_task"],
         )
 
+    @task
+    def cite_website_source_task(self) -> Task:
+        return Task( 
+            config=self.tasks_config["cite_website_source_task"],
+        )
 
     @task
     def generate_report_task(self) -> Task:
         return Task(
-            config=self.tasks_config["generate_report_task"],  # type: ignore
+            config=self.tasks_config["generate_report_task"],
         )
 
     @crew
-    def crew(self) -> Crew:
-        """Creates the Faq crew"""
+    def crew(self, **kwargs) -> Crew:
+        query = kwargs.get("query", "").lower()
+
+        tasks = [self.retrieve_info_from_doc_task(), self.source_doc_citer_task()]
+
+        if "site" in query or "web" in query or "bocs-primature.sn" in query:
+            tasks.append(self.extract_info_from_website_task())
+            tasks.append(self.website_source_citer_task())
+
+        tasks.append(self.generate_report_task())
+
         return Crew(
-            agents=self.agents,  # type: ignore
-            tasks=self.tasks,  # type: ignore
+            agents=self.agents,
+            tasks=tasks,
             process=Process.sequential,
             verbose=True,
         )

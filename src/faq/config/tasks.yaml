@@ -1,30 +1,39 @@
----
-retrieve_contracts_task:
+retrieve_info_from_doc_task:
   description: >
-    Retrieve decrees, laws, orders articles or an other informations of the website www.bocs-primature.sn from the vector database using QdrantVectorSearchTool
-    Focus on extracting the data needed for specific articles, decrees or laws that require analysis.
-    You need to retrieve the relevant decrees or laws or orders from the vector database based on the query: {query}
-  expected_output: A dataset containing all relevant articles, decrees or laws or orders with specific clauses
-    extracted, ready for analysis.
-  agent: data_retrieval_analysis_specialist
-source_citer_task:
-  description: Your goal is to retrieve the sources of answers for {query}
+    Retrieve the most relevant answer to the query: "{query}" from the official documents collection (contracts_business_5)
+    using QdrantVectorSearchTool. Focus only on extracting the raw content that answers the question. No paraphrasing.
   expected_output: >
-    A list of sources that contain the answers for {query}. 
-    We will be using the sources identify where the answer came from.
-    Sources are the sections, paragraphs, balise website or other identifiers that contain the answer.
-  agent: source_citer_specialist
+    A raw answer from the documents, with the exact source (law, decree, article, section, etc.).
+  agent: data_retrieval_analysis_specialist
 
-scrape_website_task:
+source_doc_citer_task:
   description: >
-    Scrape content from the website  and answer the question: {query}.
-  expected_output: A synthesized answer to the query, based on the content extracted from the website.
-  agent: website_scraping_specialist
+    Identify the source of the answer retrieved for query: "{query}". Indicate if it came from documents, website, or both.
+  expected_output: >
+    A list of source references (law title, decree number, article, or website section) from which the answer was extracted.
+  agent: doc_source_citer_specialist
+
+extract_info_from_website_task:
+  description: >
+    Use the website vector database to find an answer to the question: "{query}".
+    Focus on extracting a clear and concise answer from website content.
+  expected_output: >
+    A precise and relevant answer to the query, based solely on website content.
+  agent: website_info_extractor_specialist
+
+cite_website_source_task:
+  description: >
+    Provide the exact source of the answer found on the website (e.g., page number, section title, HTML element, or anchor).
+    This ensures the user knows where the information came from within the site.
+  expected_output: >
+    A reference list of the source location(s) in the website content where the answer can be found.
+  agent: website_source_citer_specialist
 
 generate_report_task:
-  description: Generate a report detailing results with sources using analytics
-    of Task 2. Be sure to provide the specific clauses that were parsed, show which section, and identify which file it came from.
-  expected_output: a comprehensive report that includes detailed conflict findings,
-    similarities, differences and sources of the articles, laws, decrees, orders or website analyzed and make analisis in french.
+  description: >
+    Combine all retrieved content to generate a final answer for the query: "{query}".
+    Clearly indicate the source(s) used: documents, website, or both.
+  expected_output: >
+    A concise and clear final answer to the query in French, specifying the origin(s) of the content (documents and/or website).
   agent: report_generation_specialist
   output_file: report.md
